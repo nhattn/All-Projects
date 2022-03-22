@@ -26,12 +26,16 @@ class Tokenizer:
                     tri_grams.add(token)
     except:
         pass
+
     def __init__(self, kernel):
         self.load_kernel(kernel)
 
     def load_kernel(self, kernel):
-        with open(kernel, 'rb') as fin:
-            Tokenizer.model = pickle.load(fin)
+        try:
+            with open(kernel, 'rb') as fin:
+                Tokenizer.model = pickle.load(fin)
+        except:
+            pass
 
     @staticmethod
     def gen_tag(word):

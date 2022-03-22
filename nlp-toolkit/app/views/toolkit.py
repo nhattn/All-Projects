@@ -69,7 +69,12 @@ def toolkit_tokenize():
         sentence = sentence.replace('/I_W', ' ')
         sentence = re.sub(r'\s+',' ', sentence)
     #  Handle tokenizer sentence and response to client
-    tokenized = tokenizer.tokenize(sentence)
+    kernel = os.path.join(os.path.dirname(__file__),'models', 'seggment.kernel')
+    if os.path.isfile(kernel):
+        seggment = Tokenizer(kernel)
+        tokenized = seggment.tokenize(sentence)
+    else:
+        tokenized = tokenizer.tokenize(sentence)
     tokens = [ token.strip() for token in tokenized.split(' ') if token.strip() ]
     return jsonify({
         'sentence': sentence,
@@ -94,7 +99,17 @@ def toolkit_tagger():
         sentence = re.sub(r'/[A-Z][a-z]\s+',' ', sentence)
         sentence = re.sub(r'\s+',' ', sentence)
     #  Handle tagger sentence and response to client
-    tagged = postagger.postagging(tokenizer.tokenize(sentence))
+    kernel = os.path.join(os.path.dirname(__file__),'models', 'tagger.kernel')
+    if os.path.isfile(kernel):
+        tagger = Tagger(kernel)
+        kernel = os.path.join(os.path.dirname(__file__),'models', 'seggment.kernel')
+        if os.path.isfile(kernel):
+            seggment = Tokenizer(kernel)
+            tagged = tagger.postagging(seggment.tokenize(sentence))
+        else:
+            tagged = tagger.postagging(tokenizer.tokenize(sentence))
+    else:
+        tagged = postagger.postagging(tokenizer.tokenize(sentence))
     return jsonify({
         'sentence': sentence,
         'tagged': tagged

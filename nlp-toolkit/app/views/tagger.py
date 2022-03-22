@@ -24,8 +24,11 @@ class Tagger:
         self.load_kernel(kernel)
 
     def load_kernel(self, kernel):
-        with open(kernel, 'rb') as fin:
-            Tagger.model = pickle.load(fin)
+        try:
+            with open(kernel, 'rb') as fin:
+                Tagger.model = pickle.load(fin)
+        except:
+            pass
 
     @staticmethod
     def gen_tag(word):
