@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>{% if site_title %}{{ site_title }}{% else %}Nature Language Processing Toolkit{% endif %}</title>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="/favicon.ico" rel="shortcut icon">
+{% block head %}{% endblock %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+* {
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+a {
+    text-decoration:none;
+    color:#0072aa;
+}
+a:hover {
+    color:#0090c0;
+}
+body {
+    font-family: 'Noto Serif',serif;
+}
+{% block style %}{% endblock %}
+</style>
+</head>
+<body>
+{% block content %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>
