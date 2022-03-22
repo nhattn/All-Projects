@@ -2,3 +2,4 @@
 *.json
 *.epub
 test.py
+*.db
