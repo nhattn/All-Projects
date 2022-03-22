@@ -7,7 +7,7 @@ import os
 from .tokenizer import Tokenizer
 from .tagger import Tagger
 from .vtrie import VTrie
-import string
+from .util import unicode_replace, normalize_text
 
 vtrie = VTrie()
 
@@ -23,6 +23,7 @@ tokenizer = Tokenizer(os.path.join(os.path.dirname(__file__), 'models', 'seggmen
 postagger = Tagger(os.path.join(os.path.dirname(__file__), 'models', 'tagger-base.kernel'))
 
 def toolkit_raw_tokenize(sentence):
+    sentence = unicode_replace(sentence)
     features = vtrie.extract_words(sentence)
     for i, v in enumerate(features):
         tmp = v.split(' ')
@@ -62,6 +63,7 @@ def toolkit_tokenize():
         return jsonify({
             'error':'Invalid data'
         })
+    sentence = unicode_replace(sentence)
     cleanup = data.get('clean',None)
     if cleanup:
         sentence = sentence.replace('_', ' ')
@@ -92,11 +94,11 @@ def toolkit_tagger():
         return jsonify({
             'error':'Invalid data'
         })
+    sentence = unicode_replace(sentence)
     cleanup = data.get('clean',None)
     if cleanup:
         sentence = sentence + ' '
-        sentence = re.sub(r'/[A-Z]\s+',' ', sentence)
-        sentence = re.sub(r'/[A-Z][a-z]\s+',' ', sentence)
+        sentence = normalize_text(sentence)
         sentence = re.sub(r'\s+',' ', sentence)
     #  Handle tagger sentence and response to client
     kernel = os.path.join(os.path.dirname(__file__),'models', 'tagger.kernel')
@@ -126,19 +128,13 @@ def toolkit_predict():
         return jsonify({
             'error':'Invalid data'
         })
+    sentence = unicode_replace(sentence)
     cleanup = data.get('clean',None)
     datatype = data.get('type','token').strip().lower()
     if datatype not in ['token', 'tagger']:
         datatype = 'token'
     if cleanup:
-        if datatype == 'token':
-            sentence = sentence.replace('_', ' ')
-            sentence = sentence.replace('/B_W', ' ')
-            sentence = sentence.replace('/I_W', ' ')
-        else:
-            sentence = sentence + ' '
-            sentence = re.sub(r'/[A-Z]\s+',' ', sentence)
-            sentence = re.sub(r'/[A-Z][a-z]\s+',' ', sentence)
+        sentence = normalize_text(sentence)
         sentence = re.sub(r'\s+',' ', sentence)
 
     tokenized = toolkit_raw_tokenize(sentence).strip()
@@ -166,6 +162,7 @@ def toolkit_save():
         return jsonify({
             'error':'Invalid data'
         })
+    text = unicode_replace(text)
     datatype = data.get('type','token').strip().lower()
     if datatype not in ['token', 'tagger']:
         datatype = 'token'
