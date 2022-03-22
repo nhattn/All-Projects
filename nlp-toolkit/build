@@ -1,0 +1,81 @@
+#!/bin/bash
+
+ROOT_DIR=`pwd`
+
+SRCDIR=`pwd`/tmpl
+DESTDIR=`pwd`/app/templates
+
+# Check folder exists
+if [ ! -d "$SRCDIR" ]; then
+    echo "No template"
+    exit
+fi
+
+if [ ! -d "$DESTDIR" ]; then
+    mkdir -p $DESTDIR
+else
+    rm -rf $DESTDIR/*
+fi
+
+# Function minified file
+function min_file() {
+    sed -i ':a;N;ba;s/\n//g' $1
+    sed -i 's/\t/ /g' $1
+    sed -i 's/    //g' $1
+    sed -i 's/\*/\\\*/g' $1
+    str=`cat $1`
+    str=`trim $str`
+    echo $str > $1
+    echo -n $(cat $1) > $1
+    sed -i 's/\\\*/\*/g' $1
+    sed -i 's/> {/>{/g' $1
+    sed -i 's/} {/}{/g' $1
+    sed -i 's/> </></g' $1
+    sed -i 's/> {1,}</></g' $1
+    sed -i 's/{#/{{ "{#" }}/g' $1
+    sed -i 's/}{{ status/} {{ status/g' $1
+}
+function min_css() {
+    # https://linuxhint.com/replace_string_in_file_bash/
+    # https://www.linuxquestions.org/questions/programming-9/remove-css-comments-with-sed-776853/
+    awk -vRS="*/" '{gsub(/\/\* .*/,"")}1' $1 > temp.txt && mv temp.txt $1
+    sed -i 's/\*/\\\*/g' $1
+    str=`cat $1`
+    str=`trim $str`
+    echo $str > $1
+    sed -i 's/ {/{/g' $1
+    sed -i 's/{ /{/g' $1
+    sed -i 's/} /}/g' $1
+    sed -i 's/, /,/g' $1
+    sed -i 's/; /;/g' $1
+    sed -i 's/: /:/g' $1
+    sed -i 's/ {/{/g' $1
+    sed -i 's/ }/}/g' $1
+    sed -i 's/ > />/g' $1
+    sed -i 's/\\\*/\*/g' $1
+    # https://jinja.palletsprojects.com/en/2.11.x/templates/#escaping
+    sed -i 's/{#/{{ "{#" }}/g' $1
+}
+# https://stackoverflow.com/a/3352015
+function trim() {
+    local var="$*"
+    # remove leading whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"
+    echo -n "$var"
+}
+# Scan file template to build
+for file in `find $SRCDIR/ -name "*.html"`; do
+    if [[ $(du -k "$file" | cut -f 1) -ne 0 ]]; then
+        newfile=$(basename $file) # https://unix.stackexchange.com/a/137031 + http://www.grymoire.com/Unix/Sed.html#uh-15b
+        cp -rf $file $DESTDIR/${newfile}
+        awk -vRS=" -->" '{gsub(/<!-- .*/,"")}1' $DESTDIR/${newfile} > temp.txt && mv temp.txt $DESTDIR/${newfile}
+        awk -vRS="*/" '{gsub(/\/\* .*/,"")}1' $DESTDIR/${newfile} > temp.txt && mv temp.txt $DESTDIR/${newfile}
+        min_file "$DESTDIR/${newfile}"
+    else
+        echo "File $file is empty content"
+    fi
+done
+clear
+exit
