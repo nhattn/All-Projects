@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import re
-from app import engine
+from app import engine, db
+from ..models.sentence import Sentence
 from flask import jsonify, request
 import os
 from .tokenizer import Tokenizer
 from .tagger import Tagger
 from .vtrie import VTrie
-from .util import unicode_replace, normalize_text
+from .util import unicode_replace, normalize_text, tokenize, is_word
+import string
 
 vtrie = VTrie()
 
@@ -77,6 +79,11 @@ def toolkit_tokenize():
         tokenized = seggment.tokenize(sentence)
     else:
         tokenized = tokenizer.tokenize(sentence)
+    if data.get('raw',None):
+        return jsonify({
+            'sentence': sentence,
+            'tokenized': tokenized
+        })
     tokens = [ token.strip() for token in tokenized.split(' ') if token.strip() ]
     return jsonify({
         'sentence': sentence,
@@ -112,6 +119,14 @@ def toolkit_tagger():
             tagged = tagger.postagging(tokenizer.tokenize(sentence))
     else:
         tagged = postagger.postagging(tokenizer.tokenize(sentence))
+    if data.get('raw',None):
+        tokens = []
+        for i, token in enumerate(tagged[0]):
+            tag = tagged[1][i]
+            if tag == 'F':
+                tag = token
+            tokens.append(token + '/' + tag)
+        tagged = ' '.join(tokens)
     return jsonify({
         'sentence': sentence,
         'tagged': tagged
@@ -139,6 +154,11 @@ def toolkit_predict():
 
     tokenized = toolkit_raw_tokenize(sentence).strip()
     if datatype == 'token':
+        if data.get('raw', None):
+            return jsonify({
+                'sentence': sentence,
+                'tokenized': tokenized
+            })
         tokens = [ token.strip() for token in tokenized.split(' ') if token.strip() ]
         return jsonify({
             'sentence': sentence,
@@ -146,6 +166,14 @@ def toolkit_predict():
         })
     tokens = [ token.strip() for token in tokenized.split(' ') if token.strip() ]
     tagged = postagger.postagging(tokenized)
+    if data.get('raw',None):
+        tokens = []
+        for i, token in enumerate(tagged[0]):
+            tag = tagged[1][i]
+            if tag == 'F':
+                tag = token
+            tokens.append(token + '/' + tag)
+        tagged = ' '.join(tokens)
     return jsonify({
         'sentence': sentence,
         'tagged': tagged
@@ -163,13 +191,66 @@ def toolkit_save():
             'error':'Invalid data'
         })
     text = unicode_replace(text)
+    id_ = data.get('id','').strip()
+    if not id_:
+        sent = Sentence.query.filter(Sentence.sentence == text).first()
+        if bool(sent):
+            return jsonify({
+                'id': sent.id,
+                'sentence' : sent.sentence,
+                'cleaned' : sent.cleaned,
+                'tokens' : sent.tokens,
+                'tagged' : sent.tagged
+            })
+        sent = Sentence()
+        sent.sentence = text
+        text = normalize_text(text+' ').replace('_',' ').strip()
+        tokens = tokenize(text.lower())
+        tokens = [ tok for tok in tokens if is_word( tok ) ]
+        sent.cleaned = ' '.join(tokens)
+        db.session.add(sent)
+        try:
+            db.session.commit()
+            return jsonify({
+                'id': sent.id,
+                'sentence' : sent.sentence,
+                'cleaned' : sent.cleaned,
+                'tokens' : sent.tokens,
+                'tagged' : sent.tagged
+            })
+        except:
+            db.session.rollback()
+            return jsonify({
+                'error': 'Save failed'
+            })
+    sent = Sentence.query.get(id_)
+    if not sent:
+        return jsonify({
+            'error': 'Sentence is not exists'
+        })
     datatype = data.get('type','token').strip().lower()
     if datatype not in ['token', 'tagger']:
         datatype = 'token'
     if datatype == 'token':
+        sent.tokens = text
+    else:
+        sent.tagged = text
+    db.session.add(sent)
+    try:
+        db.session.commit()
         return jsonify({
-            'tokenized':text
+            'id': sent.id,
+            'sentence' : sent.sentence,
+            'cleaned' : sent.cleaned,
+            'tokens' : sent.tokens,
+            'tagged' : sent.tagged
         })
-    return jsonify({
-        'tagged' : text
-    })
+    except:
+        db.session.rollback()
+        return jsonify({
+            'id': sent.id,
+            'sentence' : sent.sentence,
+            'cleaned' : sent.cleaned,
+            'tokens' : sent.tokens,
+            'tagged' : sent.tagged
+        })
