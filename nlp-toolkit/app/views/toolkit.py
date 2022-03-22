@@ -3,7 +3,7 @@
 import re
 from app import engine, db
 from ..models.sentence import Sentence
-from flask import jsonify, request
+from flask import jsonify, request, abort, render_template
 import os
 from .tokenizer import Tokenizer
 from .tagger import Tagger
@@ -27,16 +27,17 @@ postagger = Tagger(os.path.join(os.path.dirname(__file__), 'models', 'tagger-bas
 def toolkit_raw_tokenize(sentence):
     sentence = unicode_replace(sentence)
     features = vtrie.extract_words(sentence)
+    ignore_words = ["ông","bà","anh","chị","em", "chú", "bác", "cô", "dì"]
     for i, v in enumerate(features):
         tmp = v.split(' ')
-        if tmp[0].lower() in ["ông","bà","anh","chị","em"]:
+        if tmp[0].lower() in ignore_words:
             v = ' '.join(tmp[1:])
             features[i] = v
     tokens = set([ token for token in features if ' ' in token ])
     tmp = [ word.replace('_',' ') for word in tokenizer.tokenize(sentence).split(' ') if '_' in word ]
     for token in tmp:
         v = token.split(' ')
-        if v[0].lower() in ["ông","bà","anh","chị","em"]:
+        if v[0].lower() in ignore_words:
             token = ' '.join(v[1:])
         if token not in tokens:
             tokens.add(token)
@@ -52,7 +53,22 @@ def toolkit_raw_tokenize(sentence):
 
 @engine.route("/")
 def toolkit_homepage():
-    return 'Hi there'
+    return render_template('home.html')
+
+@engine.route("/sentence/<int:id>")
+def toolkit_infomation(id=0):
+    if id <= 0:
+        abort(404)
+    sent = Sentence.query.get(id)
+    if not sent:
+        abort(404)
+    next_sent = Sentence.query.filter(Sentence.id > sent.id).order_by(Sentence.id.asc()).first()
+    prev_sent = Sentence.query.filter(Sentence.id < sent.id).order_by(Sentence.id.desc()).first()
+    return render_template('sentence.html', **{
+        'sentence':sent.to_json(),
+        'next':next_sent.to_json() if next_sent else None,
+        'prev':prev_sent.to_json() if prev_sent else None
+    })
 
 @engine.route('/api/tokenize', methods=['POST'])
 def toolkit_tokenize():
@@ -236,3 +252,26 @@ def toolkit_save():
     except:
         db.session.rollback()
         return jsonify(sent.to_json())
+
+@engine.route('/api/sentence/<int:id>', methods=['GET'])
+def toolkit_sentence(id=0):
+    if id <= 0:
+        return jsonify({
+            'error': 'Sentence is not exists'
+        })
+    sent = Sentence.query.get(id)
+    if not sent:
+        return jsonify({
+            'error': 'Sentence is not exists'
+        })
+    return jsonify(sent.to_json())
+
+@engine.route('/api/neighbor', methods=['GET'])
+def toolkit_neighbor():
+    id = request.args.get('id', -1)
+    next_sent = Sentence.query.filter(Sentence.id > id).order_by(Sentence.id.asc()).first()
+    prev_sent = Sentence.query.filter(Sentence.id < id).order_by(Sentence.id.desc()).first()
+    return jsonify({
+        'next' : next_sent.to_json() if next_sent else None,
+        'prev' : prev_sent.to_json() if prev_sent else None
+    })

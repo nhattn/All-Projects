@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from app import engine
-from flask import jsonify, request
+from flask import jsonify, request, render_template
 
 @engine.errorhandler(404)
 def not_found(err):
@@ -9,7 +9,7 @@ def not_found(err):
         return jsonify({
             'error':'Not Found'
         })
-    return "404 Not Found", 404
+    return render_template('error.html'), 404
 
 @engine.errorhandler(400)
 def bad_request(err):
@@ -17,7 +17,7 @@ def bad_request(err):
         return jsonify({
             'error':'Bad Request'
         })
-    return "400 Bad Requested", 400
+    return render_template('error.html'), 404
 
 @engine.errorhandler(500)
 def server_error(err):
@@ -25,7 +25,7 @@ def server_error(err):
         return jsonify({
             'error':'Internal Server Error'
         })
-    return "500 Internal Server Error", 500
+    return render_template('error.html'), 404
 
 @engine.errorhandler(405)
 def not_allowed(err):
@@ -33,7 +33,7 @@ def not_allowed(err):
         return jsonify({
             'error':'Method Not Allowed'
         })
-    return "405 Method Not Allowed", 405
+    return render_template('error.html'), 404
 
 @engine.errorhandler(403)
 def forbidden(err):
@@ -41,4 +41,4 @@ def forbidden(err):
         return jsonify({
             'error':'Forbidden'
         })
-    return "403 Forbidden", 403
+    return render_template('error.html'), 404
