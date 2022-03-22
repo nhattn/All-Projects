@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 from app import engine
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "initdb":
+        try:
+            from app.scripts import initdb
+            initdb()
+        except Exception as e:
+            print('Error', e)
+        sys.exit(0)
+
     if engine.config["DEBUG"] == False:
         import logging
         log = logging.getLogger('werkzeug')
