@@ -1,0 +1,4 @@
+*.pyc
+*.json
+*.epub
+test.py
