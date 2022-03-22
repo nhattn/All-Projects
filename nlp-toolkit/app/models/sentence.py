@@ -14,5 +14,14 @@ class Sentence(db.Model):
     def __init__(self):
         pass
 
+    def to_json(self):
+        return {
+            'id': self.id,
+            'sentence' : self.sentence,
+            'cleaned' : self.cleaned,
+            'tokens' : self.tokens,
+            'tagged' : self.tagged
+        }
+
     def __repr__(self):
         return '<Sentence#{} [{}] />'.format(self.id, self.sentence)

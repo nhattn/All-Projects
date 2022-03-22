@@ -111,14 +111,20 @@ def toolkit_tagger():
     kernel = os.path.join(os.path.dirname(__file__),'models', 'tagger.kernel')
     if os.path.isfile(kernel):
         tagger = Tagger(kernel)
-        kernel = os.path.join(os.path.dirname(__file__),'models', 'seggment.kernel')
-        if os.path.isfile(kernel):
-            seggment = Tokenizer(kernel)
-            tagged = tagger.postagging(seggment.tokenize(sentence))
+        if '_' not in sentence:
+            kernel = os.path.join(os.path.dirname(__file__),'models', 'seggment.kernel')
+            if os.path.isfile(kernel):
+                seggment = Tokenizer(kernel)
+                tagged = tagger.postagging(seggment.tokenize(sentence))
+            else:
+                tagged = tagger.postagging(tokenizer.tokenize(sentence))
         else:
-            tagged = tagger.postagging(tokenizer.tokenize(sentence))
+            tagged = tagger.postagging(sentence)
     else:
-        tagged = postagger.postagging(tokenizer.tokenize(sentence))
+        if '_' not in sentence:
+            tagged = postagger.postagging(tokenizer.tokenize(sentence))
+        else:
+            tagged = postagger.postagging(sentence)
     if data.get('raw',None):
         tokens = []
         for i, token in enumerate(tagged[0]):
@@ -195,13 +201,7 @@ def toolkit_save():
     if not id_:
         sent = Sentence.query.filter(Sentence.sentence == text).first()
         if bool(sent):
-            return jsonify({
-                'id': sent.id,
-                'sentence' : sent.sentence,
-                'cleaned' : sent.cleaned,
-                'tokens' : sent.tokens,
-                'tagged' : sent.tagged
-            })
+            return jsonify(sent.to_json())
         sent = Sentence()
         sent.sentence = text
         text = normalize_text(text+' ').replace('_',' ').strip()
@@ -211,13 +211,7 @@ def toolkit_save():
         db.session.add(sent)
         try:
             db.session.commit()
-            return jsonify({
-                'id': sent.id,
-                'sentence' : sent.sentence,
-                'cleaned' : sent.cleaned,
-                'tokens' : sent.tokens,
-                'tagged' : sent.tagged
-            })
+            return jsonify(sent.to_json())
         except:
             db.session.rollback()
             return jsonify({
@@ -238,19 +232,7 @@ def toolkit_save():
     db.session.add(sent)
     try:
         db.session.commit()
-        return jsonify({
-            'id': sent.id,
-            'sentence' : sent.sentence,
-            'cleaned' : sent.cleaned,
-            'tokens' : sent.tokens,
-            'tagged' : sent.tagged
-        })
+        return jsonify(sent.to_json())
     except:
         db.session.rollback()
-        return jsonify({
-            'id': sent.id,
-            'sentence' : sent.sentence,
-            'cleaned' : sent.cleaned,
-            'tokens' : sent.tokens,
-            'tagged' : sent.tagged
-        })
+        return jsonify(sent.to_json())
