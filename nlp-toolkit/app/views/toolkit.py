@@ -27,7 +27,7 @@ postagger = Tagger(os.path.join(os.path.dirname(__file__), 'models', 'tagger-bas
 def toolkit_raw_tokenize(sentence):
     sentence = unicode_replace(sentence)
     features = vtrie.extract_words(sentence)
-    ignore_words = ["ông","bà","anh","chị","em", "chú", "bác", "cô", "dì"]
+    ignore_words = ["ông","bà","anh","chị","em","chú","bác","cô","dì"]
     for i, v in enumerate(features):
         tmp = v.split(' ')
         if tmp[0].lower() in ignore_words:
@@ -274,4 +274,41 @@ def toolkit_neighbor():
     return jsonify({
         'next' : next_sent.to_json() if next_sent else None,
         'prev' : prev_sent.to_json() if prev_sent else None
+    })
+
+@engine.route('/api/vocab', methods=['POST'])
+def toolkit_vocab():
+    if request.content_type and "application/json" in request.content_type:
+        data = request.get_json()
+    else:
+        data = request.form
+    vocab = data.get('vocab', '').replace('_',' ').strip()
+    if not vocab:
+        return jsonify({
+            'error':'Invalid data'
+        })
+    vocab = unicode_replace(vocab)
+    if ' ' not in vocab:
+        return jsonify({
+            'error':'Vocabulary is not 2 or 3 gram'
+        })
+    vocabs = set()
+    with open(os.path.join(os.path.dirname(__file__), 'models', 'vocab.txt'), 'r', encoding='utf-8') as fin:
+        word = fin.read().strip()
+        if word and word not in vocabs:
+            vocabs.add(word)
+    total = len(vocabs)
+    vocab = vocab.lower()
+    if vocab not in vocabs:
+        total = total + 1
+        with open(os.path.join(os.path.dirname(__file__), 'models', 'vocab.txt'), 'a', encoding='utf-8') as fout:
+            fout.write(vocab + "\n")
+        tmp = vocab.split(' ')
+        if len(tmp) == 2:
+            tokenizer.bi_grams.add(vocab)
+        elif len(tmp) == 3:
+            tokenizer.tri_grams.add(vocab)
+    return jsonify({
+        'vocabs': total,
+        'vocab' : vocab
     })
