@@ -28,6 +28,19 @@ form {
     line-height:1.8;
     font-size:1.1em;
 }
+#search {
+    text-align: right;
+    margin: 0;
+}
+input[type="keyword"] {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+    max-width: 100%;
+    width: 40%;
+    font-family: 'Noto Serif',serif;
+    outline:none;
+}
 .result {
     background-color: #eee;
     padding: 2%;
@@ -78,11 +91,17 @@ li {
         padding:2% 5%;
         margin:0 auto;
     }
+    input[type="keyword"] {
+        width:60%;
+    }
 }
 {% endblock %}
 {% block content %}
 <main>
-    <form action="" method="POST" spellcheck="false">
+    <form action="{{ url_for(".toolkit_homepage") }}" method="GET" spellcheck="false" id="search">
+        <input type="keyword" name="q" value="{% if keyword %}{{ keyword }}{% endif %}" placeholder="Input keyword for search sentence" />
+    </form>
+    <form action="{{ url_for(".toolkit_homepage") }}" method="POST" spellcheck="false" id="toolkit">
         <p><textarea name="text"></textarea></p>
         <p><button type="submit">Analyze</button></p>
     </form>
@@ -96,7 +115,13 @@ li {
         <p></p>
     </div>
     {% if sentences %}
-        <h3>Recently Sentences</h3>
+        <h3>
+            {% if keyword %}
+                Results for keyword <strong>&quot;{{ keyword }}&quot;</strong>
+            {% else %}
+                Recently Sentences
+            {% endif %}
+        </h3>
         <ul>
             {% for sent in sentences %}
                 <li>
@@ -131,7 +156,7 @@ li {
         });
     }
     document.addEventListener("DOMContentLoaded", function(e) {
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.querySelector('form#toolkit').addEventListener('submit', function(e) {
             e.preventDefault();
             return false;
         });

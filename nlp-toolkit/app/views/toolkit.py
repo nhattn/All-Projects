@@ -53,8 +53,12 @@ def toolkit_raw_tokenize(sentence):
 
 @engine.route("/")
 def toolkit_homepage():
-    query = Sentence.query.order_by(Sentence.id.desc()).paginate(1, 10, error_out=False)
-    return render_template('home.html',sentences=query.items)
+    keyword = request.args.get('q',None)
+    query = Sentence.query.order_by(Sentence.id.desc())
+    if keyword and keyword.strip():
+        query = query.filter(Sentence.sentence.ilike('%{}%'.format(keyword.strip().lower())))
+    query = query.paginate(1, 10, error_out=False)
+    return render_template('home.html',sentences=query.items, keyword=keyword)
 
 @engine.route("/sentence/<int:id>")
 def toolkit_infomation(id=0):
