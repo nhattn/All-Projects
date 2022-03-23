@@ -218,8 +218,8 @@ def toolkit_save():
             'error':'Invalid data'
         })
     text = unicode_replace(text)
-    id_ = data.get('id','').strip()
-    if not id_:
+    id_ = data.get('id',None)
+    if not id_ or not isinstance(id_, int):
         sent = Sentence.query.filter(Sentence.sentence == text).first()
         if bool(sent):
             return jsonify(sent.to_json())

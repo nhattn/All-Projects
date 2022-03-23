@@ -55,6 +55,7 @@ button {
     color: #fff;
     font-size: large;
     font-family: 'Noto Serif',serif;
+    margin-right:10px;
 }
 nav {
     display:flex;
@@ -78,6 +79,35 @@ nav a {
     content: 'Next';
     text-align: right;
 }
+.nlp-tool {
+    margin-top:15px;
+    display:block;
+}
+.nlp-tool button {
+    padding: 3px;
+    margin: 0 3px 3px 0;
+    border-radius: 3px;
+    width: 31.80%;
+    cursor:pointer;
+    background-color: #eee;
+    text-align:left;
+    border:none;
+    color:#000;
+}
+.nlp-tool button[data-cmd="A"] { background-color: #fc6; }
+.nlp-tool button[data-cmd="R"] { background-color: #c99; }
+.nlp-tool button[data-cmd="C"] { background-color: #cc9; }
+.nlp-tool button[data-cmd="L"] { background-color: #99c; }
+.nlp-tool button[data-cmd="I"] { background-color: #6f6; }
+.nlp-tool button[data-cmd="N"] { background-color: #ccc; }
+.nlp-tool button[data-cmd="M"] { background-color: #6c9; }
+.nlp-tool button[data-cmd="E"] { background-color: #f9c; }
+.nlp-tool button[data-cmd="Np"] { background-color: #ee7; }
+.nlp-tool button[data-cmd="V"] { background-color: #cf6; }
+.nlp-tool button code {
+    color:brown;
+    background-color:transparent;
+}
 @media (max-width: 500px) {
     main, nav {
         padding:2% 5%;
@@ -96,6 +126,9 @@ nav a {
     .next:before,.prev:before {
         display:none;
     }
+    .nlp-tool button {
+        width:49%;
+    }
 }
 {% endblock %}
 {% block content %}
@@ -105,6 +138,7 @@ nav a {
             <a href="{{ url_for(".toolkit_homepage") }}">Home</a>
             <input type="keyword" name="q" value="" placeholder="Input keyword for search sentence" />
         </form>
+        <div id="message"></div>
         <form action="" method="post" spellcheck="false">
             <p>
                 Sentence<br />
@@ -113,10 +147,34 @@ nav a {
             <p>
                 Word Segmentation<br />
                 <textarea name="tokens">{{ sentence.tokens }}</textarea>
+                <button id="seggment">Segmentation</button>
+                <button id="saveSeggment">Save</button>
             </p>
             <p>
                 POS Tagger<br />
                 <textarea name="tagged">{{ sentence.tagged }}</textarea>
+                <button id="tagging">Tagging</button>
+                <button id="saveTagged">Save</button>
+                <span class="nlp-tool">
+                    <button data-cmd="A"><code>/A</code> Tính từ</button>
+                    <button data-cmd="C"><code>/C</code> Liên từ</button>
+                    <button data-cmd="E"><code>/E</code> Giới từ</button>
+                    <button data-cmd="I"><code>/I</code> Thán từ</button>
+                    <button data-cmd="L"><code>/L</code> Định từ</button>
+                    <button data-cmd="M"><code>/M</code> Số từ</button>
+                    <button data-cmd="N"><code>/N</code> Danh từ</button>
+                    <button data-cmd="Nc"><code>/Nc</code> Phân loại</button>
+                    <button data-cmd="Ny"><code>/Ny</code> Viết tắt</button>
+                    <button data-cmd="Np"><code>/Np</code> Tên riêng</button>
+                    <button data-cmd="Nu"><code>/Nu</code> Đơn vị</button>
+                    <button data-cmd="P"><code>/P</code> Đại từ</button>
+                    <button data-cmd="R"><code>/R</code> Phó từ</button>
+                    <button data-cmd="S"><code>/S</code> Yếu tố</button>
+                    <button data-cmd="T"><code>/T</code> Trợ từ</button>
+                    <button data-cmd="V"><code>/V</code> Động từ</button>
+                    <button data-cmd="X"><code>/X</code> Từ loại</button>
+                    <button data-cmd="F"><code>/F</code> Ký tự</button>
+                </span>
             </p>
         </form>
     </main>
@@ -133,7 +191,163 @@ nav a {
 {% endif %}
 {% endblock %}
 {% block scripts %}
+{% if sentence %}
 <script>
-
+function getJSON(url, data, callback) {
+    callback = callback || function(obj) { console.log(obj); };
+    fetch(url, {
+        method: "post",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    }).then(function(resp) {
+        if (resp.status === 200) {
+            return resp.json();
+        } else {
+            console.log("Status: " + resp.status);
+            return Promise.reject("server");
+        }
+    }).then(function(obj) {
+        callback(obj);
+    }).catch(function(err) {
+        callback({
+            "error": "Có lỗi trong quá trình gửi dữ liệu"
+        })
+    });
+}
+document.addEventListener("DOMContentLoaded", function(e) {
+    document.querySelector('button#seggment').addEventListener('click', function(e) {
+        e.preventDefault();
+        var inp = document.querySelector('textarea[name="tokens"]');
+        if (!inp) {
+            return false;
+        }
+        var text = inp.value.trim();
+        if (text.length == 0) {
+            text = document.querySelector('textarea[name="sentence"]').value.trim();
+        }
+        if(text.length > 0) {
+            getJSON('{{ url_for(".toolkit_predict") }}', {
+                text : text,
+                clean : true,
+                type : 'token',
+                raw : true
+            }, function(resp) {
+                if (resp.hasOwnProperty('error')) {
+                    document.querySelector('#message').innerText = resp.error;
+                } else {
+                    var result = resp.hasOwnProperty('tokenized') ? resp.tokenized : resp.sentence;
+                    inp.value = result;
+                }
+            });
+        }
+        return false;
+    }, false);
+    document.querySelector('button#saveSeggment').addEventListener('click', function(e) {
+        e.preventDefault();
+        var inp = document.querySelector('textarea[name="tokens"]');
+        if (!inp) {
+            return false;
+        }
+        var text = inp.value.trim();
+        if(text.length > 0) {
+            getJSON('{{ url_for(".toolkit_save") }}', {
+                text: text,
+                id: {{ sentence.id }},
+                type:'token'
+            }, function(resp) {
+                if (resp.hasOwnProperty('error')) {
+                    document.querySelector('#message').innerText = resp.error;
+                } else {
+                    document.querySelector('#message').innerText = 'Saved';
+                }
+            });
+        }
+        return false;
+    }, false);
+    document.querySelector('button#tagging').addEventListener('click', function(e) {
+        e.preventDefault();
+        var inp = document.querySelector('textarea[name="tagged"]');
+        if (!inp) {
+            return false;
+        }
+        var text = inp.value.trim();
+        if (text.length == 0) {
+            text = document.querySelector('textarea[name="sentence"]').value.trim();
+        }
+        if(text.length > 0) {
+            getJSON('{{ url_for(".toolkit_predict") }}', {
+                text : text,
+                clean : true,
+                type : 'tagger',
+                raw : true
+            }, function(resp) {
+                if (resp.hasOwnProperty('error')) {
+                    document.querySelector('#message').innerText = resp.error;
+                } else {
+                    var result = (function(text) {
+                        var tokens = text.split(/\s+/).map(function(v) {
+                            if (v == '///') return '/F';
+                            var word_tag = v.split('/');
+                            var tag = word_tag.pop();
+                            if (/^[A-Z]/.test(tag) == false) {
+                                tag = 'F';
+                            }
+                            return word_tag.join('/')+'/'+tag;
+                        });
+                        return tokens.join(' ');
+                    })(resp.hasOwnProperty('tagged') ? resp.tagged : resp.sentence);
+                    inp.value = result;
+                }
+            });
+        }
+        return false;
+    }, false);
+    document.querySelector('button#saveTagged').addEventListener('click', function(e) {
+        e.preventDefault();
+        var inp = document.querySelector('textarea[name="tagged"]');
+        if (!inp) {
+            return false;
+        }
+        var text = inp.value.trim();
+        if(text.length > 0) {
+            getJSON('{{ url_for(".toolkit_save") }}', {
+                text: text,
+                id: {{ sentence.id }},
+                type:'tagger'
+            }, function(resp) {
+                if (resp.hasOwnProperty('error')) {
+                    document.querySelector('#message').innerText = resp.error;
+                } else {
+                    document.querySelector('#message').innerText = 'Saved';
+                }
+            });
+        }
+        return false;
+    }, false);
+    document.querySelectorAll('button[data-cmd]').forEach(function(el) {
+        el.addEventListener('click', function(e) {
+            e.preventDefault();
+            var cmd = this.dataset.cmd;
+            if (cmd) {
+                var selection = document.getSelection();
+                var inp = document.querySelector('textarea[name="tagged"]');
+                if (!inp) {
+                    return false;
+                }
+                var allText = inp.value.trim();
+                var raw = allText.substring(inp.selectionStart, inp.selectionEnd); /* https://stackoverflow.com/a/23027596 */
+                var sel = raw.trim().replace(/\/[A-Za-z]{1,2}/,'');
+                if (sel.length > 0) {
+                    text = ' ' + sel + '/' + cmd + ' ';
+                    allText = allText.replace(raw, text);
+                    allText = allText.replace(/ {2,}/g,' ').trim();
+                    inp.value = allText;
+                }
+            }
+            return false;
+        }, false);
+    });
+}, false);
 </script>
+{% endif %}
 {% endblock %}
