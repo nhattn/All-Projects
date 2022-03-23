@@ -34,7 +34,7 @@ form {
     border-radius: 5px;
     color: #888;
 }
-.result h3 {
+h3 {
     font-size: medium;
     font-weight: 500;
     border-bottom: 1px solid #ccc;
@@ -63,9 +63,20 @@ button {
     font-size: large;
     font-family: 'Noto Serif',serif;
 }
+main > h3 {
+    padding-bottom: 15px;
+}
+ul {
+    list-style-position: inside;
+}
+li {
+    padding: 0 0 15px;
+    list-style: none;
+}
 @media (max-width: 500px) {
     main {
-        padding:5%;
+        padding:2% 5%;
+        margin:0 auto;
     }
 }
 {% endblock %}
@@ -84,6 +95,16 @@ button {
         <h3>POS Tagger</h3>
         <p></p>
     </div>
+    {% if sentences %}
+        <h3>Recently Sentences</h3>
+        <ul>
+            {% for sent in sentences %}
+                <li>
+                    <a href="{{ url_for(".toolkit_sentence", id=sent.id) }}">{{ sent.sentence }}</a>
+                </li>
+            {% endfor %}
+        <ul>
+    {% endif %}
 </main>
 {% endblock %}
 {% block scripts %}
@@ -118,7 +139,7 @@ button {
             e.preventDefault();
             var text = document.querySelector('textarea[name="text"]').value.trim();
             if (text.length > 0) {
-                getJSON('/api/tokenize', {
+                getJSON('{{ url_for(".toolkit_tokenize") }}', {
                     text : text,
                     clean : true,
                     raw : true
@@ -138,7 +159,7 @@ button {
                         document.querySelector('#seggment p').innerHTML = result;
                     }
                 });
-                getJSON('/api/tagger', {
+                getJSON('{{ url_for(".toolkit_tagger") }}', {
                     text : text,
                     clean : true,
                     raw : true

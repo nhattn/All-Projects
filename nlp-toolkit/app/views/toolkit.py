@@ -53,7 +53,8 @@ def toolkit_raw_tokenize(sentence):
 
 @engine.route("/")
 def toolkit_homepage():
-    return render_template('home.html')
+    query = Sentence.query.order_by(Sentence.id.desc()).paginate(1, 10, error_out=False)
+    return render_template('home.html',sentences=query.items)
 
 @engine.route("/sentence/<int:id>")
 def toolkit_infomation(id=0):
