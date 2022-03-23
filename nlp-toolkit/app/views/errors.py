@@ -17,7 +17,7 @@ def bad_request(err):
         return jsonify({
             'error':'Bad Request'
         })
-    return render_template('error.html'), 404
+    return render_template('error.html'), 400
 
 @engine.errorhandler(500)
 def server_error(err):
@@ -25,7 +25,7 @@ def server_error(err):
         return jsonify({
             'error':'Internal Server Error'
         })
-    return render_template('error.html'), 404
+    return render_template('error.html'), 500
 
 @engine.errorhandler(405)
 def not_allowed(err):
@@ -33,7 +33,7 @@ def not_allowed(err):
         return jsonify({
             'error':'Method Not Allowed'
         })
-    return render_template('error.html'), 404
+    return render_template('error.html'), 405
 
 @engine.errorhandler(403)
 def forbidden(err):
@@ -41,4 +41,4 @@ def forbidden(err):
         return jsonify({
             'error':'Forbidden'
         })
-    return render_template('error.html'), 404
+    return render_template('error.html'), 403
