@@ -13,10 +13,157 @@
     border-radius: 1px;
     -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.5);
 }
+main {
+    max-width: 650px;
+    margin: 10px auto;
+}
+div {
+    margin:22px auto;
+    line-height:1.8;
+    font-size:1.1em;
+    padding:0 5%;
+}
+form {
+    margin:22px auto;
+    line-height:1.8;
+    font-size:1.1em;
+}
+.result {
+    background-color: #eee;
+    padding: 2%;
+    border-radius: 5px;
+    color: #888;
+}
+.result h3 {
+    font-size: medium;
+    font-weight: 500;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 15px;
+    color: brown;
+}
+.result p span {
+    color: #000;
+}
+textarea {
+    width: 100%;
+    outline: none;
+    padding: 10px;
+    border: 1px solid #eee;
+    resize: none;
+    border-radius: 3px;
+    min-height: 80px;
+    font-family: 'Noto Serif',serif;
+}
+button {
+    padding: 5px 20px;
+    border: none;
+    border-radius: 3px;
+    background-color: #3c8dbc;
+    color: #fff;
+    font-size: large;
+    font-family: 'Noto Serif',serif;
+}
+@media (max-width: 500px) {
+    main {
+        padding:5%;
+    }
+}
 {% endblock %}
 {% block content %}
-
+<main>
+    <form action="" method="POST" spellcheck="false">
+        <p><textarea name="text"></textarea></p>
+        <p><button type="submit">Analyze</button></p>
+    </form>
+    <div id="message"></div>
+    <div id="seggment" class="result">
+        <h3>Word Segmentation</h3>
+        <p></p>
+    </div>
+    <div id="tagger" class="result">
+        <h3>POS Tagger</h3>
+        <p></p>
+    </div>
+</main>
 {% endblock %}
 {% block scripts %}
-
+<script>
+    function getJSON(url, data, callback) {
+        callback = callback || function(obj) { console.log(obj); };
+        fetch(url, {
+            method: "post",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        }).then(function(resp) {
+            if (resp.status === 200) {
+                return resp.json();
+            } else {
+                console.log("Status: " + resp.status);
+                return Promise.reject("server");
+            }
+        }).then(function(obj) {
+            callback(obj);
+        }).catch(function(err) {
+            callback({
+                "error": "Có lỗi trong quá trình gửi dữ liệu"
+            })
+        });
+    }
+    document.addEventListener("DOMContentLoaded", function(e) {
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        document.querySelector('button[type="submit"]').addEventListener('click', function(e) {
+            e.preventDefault();
+            var text = document.querySelector('textarea[name="text"]').value.trim();
+            if (text.length > 0) {
+                getJSON('/api/tokenize', {
+                    text : text,
+                    clean : true,
+                    raw : true
+                }, function(resp) {
+                    if (resp.hasOwnProperty('error')) {
+                        document.querySelector('#message').innerText = resp.error;
+                    } else {
+                        var result = (function(text) {
+                            var tokens = text.split(/\s+/).map(function(v) {
+                                if (v.indexOf('_') != -1) {
+                                    return '<span>'+v+'</span>';
+                                }
+                                return v;
+                            });
+                            return tokens.join(' ');
+                        })(resp.hasOwnProperty('tokenized') ? resp.tokenized : resp.sentence);
+                        document.querySelector('#seggment p').innerHTML = result;
+                    }
+                });
+                getJSON('/api/tagger', {
+                    text : text,
+                    clean : true,
+                    raw : true
+                }, function(resp) {
+                    if (resp.hasOwnProperty('error')) {
+                        document.querySelector('#message').innerText = resp.error;
+                    } else {
+                        var result = (function(text) {
+                            var tokens = text.split(/\s+/).map(function(v) {
+                                if (v == '///') return '/<span>/F</span>';
+                                var word_tag = v.split('/');
+                                var tag = word_tag.pop();
+                                if (/^[A-Z]/.test(tag) == false) {
+                                    tag = 'F';
+                                }
+                                return word_tag.join('/')+'<span>/'+tag+'</span>';
+                            });
+                            return tokens.join(' ');
+                        })(resp.hasOwnProperty('tagged') ? resp.tagged : resp.sentence);
+                        document.querySelector('#tagger p').innerHTML = result;
+                    }
+                });
+            }
+            return false;
+        },false);
+    }, false);
+</script>
 {% endblock %}
