@@ -9,7 +9,7 @@ def get_note(s):
     return tmp
 
 def line_break(s):
-    if '![' in s:
+    if '![' in s or '](' in s:
         return s
     words = [word.strip() for word in s.split(' ') if word.strip() ]
     lines = []
@@ -26,9 +26,21 @@ def line_break(s):
 for entry in entries:
     node = get_note(entry['link'])
     lines = [ line_break(line) for line in entry['content'].strip().split('\n') if line.strip() ]
-    description = lines[0]
-    if '![' in description:
-        description = lines[1]
+    i = 0
+    while i < 5:
+        description = lines[i]
+        if '![' not in description and '](' in description:
+            description = description.split('](')[0]
+            description = description[1:]
+            if description.strip():
+                break
+        if '![' not in description and '](' not in description:
+            break
+        i = i + 1
+        if i >= len(lines):
+            description = ''
+            break
+        
     content = '\n\n'.join(lines)
     content = re.sub(r'\n{2,}','\n\n',content)
     with open(('%s.md' % node),'w',encoding='utf-8') as f:
