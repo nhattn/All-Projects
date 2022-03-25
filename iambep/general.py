@@ -23,6 +23,11 @@ def line_break(s):
         lines.append(line.strip())
     return '\n'.join(lines)
 
+def short_link(link):
+    node = get_note(link)
+    link = link.split('/' + node)[0]
+    return link + '/' + node
+
 for entry in entries:
     node = get_note(entry['link'])
     lines = [ line_break(line) for line in entry['content'].strip().split('\n') if line.strip() ]
@@ -40,8 +45,9 @@ for entry in entries:
         if i >= len(lines):
             description = ''
             break
-        
+    description = description.replace('\n',' ')
+    description = description.replace(':','')
     content = '\n\n'.join(lines)
     content = re.sub(r'\n{2,}','\n\n',content)
     with open(('%s.md' % node),'w',encoding='utf-8') as f:
-        f.write("---\nid:{}\ndescription:{}\nlink:{}\n---\n\n{}".format(entry['id'],description, entry['link'], content))
+        f.write("---\nid : {}\ndescription : {}\nlink : {}\n---\n\n{}".format(entry['id'],description, short_link(entry['link']), content))
