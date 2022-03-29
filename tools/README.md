@@ -48,3 +48,5 @@ lật                 V   B-VP
 ngang               A   B-AP
 .                   F   O
 ```
+
+> [nlp_workshop_odsc19](https://github.com/dipanjanS/nlp_workshop_odsc19)
