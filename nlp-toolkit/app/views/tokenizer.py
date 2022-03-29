@@ -13,6 +13,8 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 import multiprocessing as mp
 
+TOKEN_LABELS = ['B_W', 'I_W']
+
 class Tokenizer:
     bi_grams = set()
     tri_grams = set()
@@ -80,7 +82,7 @@ class Tokenizer:
             c1=params_space['c1'],
             c2=params_space['c2']
         )
-        f1_scorer = make_scorer(metrics.flat_f1_score,average='weighted', labels=['B_W', 'I_W'])
+        f1_scorer = make_scorer(metrics.flat_f1_score,average='weighted', labels=TOKEN_LABELS)
         rs = RandomizedSearchCV( crf, params_space,cv=5,verbose=1, n_jobs=int(mp.cpu_count() / 2), n_iter=10, scoring=f1_scorer)
         rs.fit(X_train, y_train)
         return (rs, X_test, y_test)
