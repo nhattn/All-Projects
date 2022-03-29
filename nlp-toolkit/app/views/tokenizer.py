@@ -11,6 +11,7 @@ import sklearn_crfsuite
 from sklearn_crfsuite import metrics
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
+import multiprocessing as mp
 
 class Tokenizer:
     bi_grams = set()
@@ -80,7 +81,7 @@ class Tokenizer:
             c2=params_space['c2']
         )
         f1_scorer = make_scorer(metrics.flat_f1_score,average='weighted', labels=['B_W', 'I_W'])
-        rs = RandomizedSearchCV( crf, params_space,cv=5,verbose=1, n_jobs=12, n_iter=50, scoring=f1_scorer)
+        rs = RandomizedSearchCV( crf, params_space,cv=5,verbose=1, n_jobs=int(mp.cpu_count() / 2), n_iter=10, scoring=f1_scorer)
         rs.fit(X_train, y_train)
         return (rs, X_test, y_test)
 
