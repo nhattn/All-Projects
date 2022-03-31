@@ -715,9 +715,12 @@ class SimpleEcho(WebSocket):
             mode = 'w'
         else:
             mode = 'a'
-        with open('data.raw', mode, encoding='utf-8') as fin:
-            fin.write(msg+'\n')
-        self.send_message('Recived %d bytes' % len(self.data))
+        try:
+            with open('data.raw', mode, encoding='utf-8') as fin:
+                fin.write(msg+'\n')
+            self.send_message('Recived %d bytes and save done.' % len(self.data))
+        except:
+            self.send_message('Recived %d bytes, save failed' % len(self.data))
 
     def connected(self):
         print(self.address, 'connected')

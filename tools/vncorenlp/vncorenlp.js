@@ -54,16 +54,36 @@ var socket = null;
 function initSocket() {
     var ws = new WebSocket('ws://127.0.0.1:9876')
     ws.onopen = function(e) {
-        console.log('Connected');
+        var el = document.querySelector('#vtool-alert');
+        if (el) {
+            el.innerText = 'Connected';
+        } else {
+            console.log('Connected');
+        }
     }
     ws.onmessage = function(e) {
-        console.log(e.data || 'no data')
+        var el = document.querySelector('#vtool-alert');
+        if (el) {
+            el.innerText = e.data || 'no data';
+        } else {
+            console.log(e.data || 'no data')
+        }
     }
     ws.onclose = function(e) {
-        console.log('Closed')
+        var el = document.querySelector('#vtool-alert');
+        if (el) {
+            el.innerText = 'Closed';
+        } else {
+            console.log('Closed')
+        }
     }
     ws.onerror = function(e) {
-        console.log('error');
+        var el = document.querySelector('#vtool-alert');
+        if (el) {
+            el.innerText = 'error';
+        } else {
+            console.log('error');
+        }
     }
     return ws;
 }
@@ -99,6 +119,9 @@ button.addEventListener('click', function(e) {
 var p2 = document.createElement('p');
 p2.appendChild(button)
 div.appendChild(p2);
+var p3 = document.createElement('p');
+p3.id = "vtool-alert"
+div.appendChild(p3);
 document.body.appendChild(div)
 document.addEventListener('mouseup', function(e) {
     const selection = window.getSelection().toString();
