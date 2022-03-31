@@ -50,6 +50,23 @@ styl.textContent = `#vtoolkit {
     display:block;
 }`;
 document.head.appendChild(styl)
+var socket = null;
+function initSocket() {
+    var ws = new WebSocket('ws://127.0.0.1:9876')
+    ws.onopen = function(e) {
+        console.log('Connected');
+    }
+    ws.onmessage = function(e) {
+        console.log(e.data || 'no data')
+    }
+    ws.onclose = function(e) {
+        console.log('Closed')
+    }
+    ws.onerror = function(e) {
+        console.log('error');
+    }
+    return ws;
+}
 var div = document.createElement('div');
 div.id = 'vtoolkit'
 div.className = 'vtoolkit'
@@ -67,28 +84,22 @@ button.addEventListener('click', function(e) {
     if (text.length == 0) {
         return false;
     }
-    if (socket.readyState == socket.OPEN) {
-        socket.send(text)
+    var delay = 1;
+    if (socket == null || socket.readyState != socket.OPEN) {
+        socket = initSocket();
+        delay = 100;
     }
+    setTimeout(function(ws) {
+        if (ws.readyState == ws.OPEN) {
+            ws.send(text)
+        }
+    }, delay, socket);
     return false;
 });
 var p2 = document.createElement('p');
 p2.appendChild(button)
 div.appendChild(p2);
 document.body.appendChild(div)
-var socket = new WebSocket('ws://127.0.0.1:9876')
-socket.onopen = function(e) {
-    console.log('Connected');
-}
-socket.onmessage = function(e) {
-    console.log(e.data || 'no data')
-}
-socket.onclose = function(e) {
-    console.log('Closed')
-}
-socket.onerror = function(e) {
-    console.log('error');
-}
 document.addEventListener('mouseup', function(e) {
     const selection = window.getSelection().toString();
     if (selection.trim().length > 0) {
