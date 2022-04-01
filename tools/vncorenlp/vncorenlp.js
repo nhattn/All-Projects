@@ -1,17 +1,17 @@
 var styl = document.createElement('style')
 styl.textContent = `#vtoolkit {
-    width:300px;
+    width:350px;
     top:10px;
     right:10px;
-    border: #ffc810;
-    background-color: #fffae6;
+    border: 1px solid #d0d7de;
+    background-color: #f6f8fa;
     padding:10px;
     border-radius: 3px;
     z-index:999999;
     position:fixed;
 }
 #vtoolkit p {
-    margin:22px 0;
+    margin:15px 0;
 }
 #vtoolkit > p:nth-child(1) {
     margin: 0;
@@ -22,13 +22,15 @@ styl.textContent = `#vtoolkit {
 }
 #vtoolkit textarea {
     width: 100%;
-    min-height: 80px;
+    min-height: 250px;
     padding: 10px;
     min-width: 100%;
     font-size: large;
     box-sizing: border-box;
     border: none;
     background-color: #fff;
+    outline:none;
+    resize:none;
 }
 #vtoolkit textarea::-webkit-scrollbar {
     width: 6px;
@@ -48,7 +50,8 @@ styl.textContent = `#vtoolkit {
     color: #fff;
     border-radius: 5px;
     font-weight: bold;
-    font-size: large;
+    font-size: small;
+    margin:0;
 }
 .vtoolkit {
     display:none;
