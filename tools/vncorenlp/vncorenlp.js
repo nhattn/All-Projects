@@ -13,6 +13,13 @@ styl.textContent = `#vtoolkit {
 #vtoolkit p {
     margin:22px 0;
 }
+#vtoolkit > p:nth-child(1) {
+    margin: 0;
+    text-align: right;
+}
+#vtoolkit a {
+    color:red;
+}
 #vtoolkit textarea {
     width: 100%;
     min-height: 80px;
@@ -90,6 +97,16 @@ function initSocket() {
 var div = document.createElement('div');
 div.id = 'vtoolkit'
 div.className = 'vtoolkit'
+var p0 = document.createElement('p');
+var a = document.createElement('a')
+a.href = 'javascript:void(0)';
+a.textContent = 'Close';
+a.addEventListener('click', function(e) {
+    div.className = 'vtoolkit';
+    return false;
+});
+p0.appendChild(a)
+div.appendChild(p0)
 var p = document.createElement('p');
 var textarea = document.createElement('textarea')
 textarea.name = 'sentence'
