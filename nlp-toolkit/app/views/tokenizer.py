@@ -18,6 +18,10 @@ TOKEN_LABELS = ['B_W', 'I_W']
 class Tokenizer:
     bi_grams = set()
     tri_grams = set()
+    location_names = set()
+    first_names = set()
+    middle_names = set()
+    last_names = set()
     model = None
     try:
         with open(os.path.join(os.path.dirname(__file__), 'models', 'vocab.txt'), 'r', encoding='utf-8') as fin:
@@ -27,6 +31,29 @@ class Tokenizer:
                     bi_grams.add(token)
                 elif len(tmp) == 3:
                     tri_grams.add(token)
+    except:
+        pass
+
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'models', 'locations.txt'), 'r', encoding='utf-8') as fin:
+            for token in fin.read().split('\n'):
+                token = token.strip()
+                if token:
+                    location_names.add(token.lower())
+    except:
+        pass
+
+    try:
+        with open(os.path.join(os.path.dirname(__file__), 'models', 'names.txt'), 'r', encoding='utf-8') as fin:
+            for token in fin.read().split('\n'):
+                token = token.strip()
+                if token:
+                    word = token.lower().split()
+                    first_names.append(word[0])
+                    if len(word) > 1:
+                        last_names.append(word[-1])
+                    if len(word) > 2:
+                        middle_names.extend(word[1:-1])
     except:
         pass
 
@@ -96,6 +123,9 @@ class Tokenizer:
             'word.isupper()': word.isupper(),
             'word.istitle()': word.istitle(),
             'word.isdigit()': word.isdigit(),
+            'word.is_firstname()' : word.lower() in Tokenizer.first_names,
+            'word.is_middlename()' : word.lower() in Tokenizer.middle_names,
+            'word.is_lastname()' : word.lower() in Tokenizer.last_names
         }
         if i > 0:
             word1 = sent[i - 1][0] if is_training else sent[i - 1]
@@ -104,11 +134,13 @@ class Tokenizer:
                 '-1:word.istitle()': word1.istitle(),
                 '-1:word.isupper()': word1.isupper(),
                 '-1:word.bi_gram()': ' '.join([word1, word]).lower() in Tokenizer.bi_grams,
+                '-1:word.is_location()': ' '.join([word1, word]).lower() in Tokenizer.location_names
             })
             if i > 1:
                 word2 = sent[i - 2][0] if is_training else sent[i - 2]
                 features.update({
                     '-2:word.tri_gram()': ' '.join([word2, word1, word]).lower() in Tokenizer.tri_grams,
+                    '-2:word.is_location()': ' '.join([word2, word1, word]).lower() in Tokenizer.location_names
                 })
         if i < len(sent) - 1:
             word1 = sent[i + 1][0] if is_training else sent[i + 1]
@@ -117,11 +149,13 @@ class Tokenizer:
                 '+1:word.istitle()': word1.istitle(),
                 '+1:word.isupper()': word1.isupper(),
                 '+1:word.bi_gram()': ' '.join([word, word1]).lower() in Tokenizer.bi_grams,
+                '+1:word.is_location()': ' '.join([word, word1]).lower() in Tokenizer.location_names
             })
             if i < len(sent) - 2:
                 word2 = sent[i + 2][0] if is_training else sent[i + 2]
                 features.update({
                     '+2:word.tri_gram()': ' '.join([word, word1, word2]).lower() in Tokenizer.tri_grams,
+                    '+2:word.is_location()': ' '.join([word, word1, word2]).lower() in Tokenizer.location_names
                 })
         return features
 
