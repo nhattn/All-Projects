@@ -143,7 +143,12 @@ def toolkit_tagger():
             tagged = tagger.postagging(sentence)
     else:
         if '_' not in sentence:
-            tagged = postagger.postagging(tokenizer.tokenize(sentence))
+            kernel = os.path.join(os.path.dirname(__file__),'models', 'seggment.kernel')
+            if os.path.isfile(kernel):
+                seggment = Tokenizer(kernel)
+                tagged = postagger.postagging(seggment.tokenize(sentence))
+            else:
+                tagged = postagger.postagging(tokenizer.tokenize(sentence))
         else:
             tagged = postagger.postagging(sentence)
     if data.get('raw',None):
