@@ -115,6 +115,17 @@ class Tokenizer:
         return (rs, X_test, y_test)
 
     @staticmethod
+    def is_lastname(word):
+        if word.lower() in Tokenizer.last_names:
+            return True
+        if len(word) == 1:
+            if word in string.punctuation:
+                return False
+            if word.isdigit():
+                return False
+        return True
+
+    @staticmethod
     def word2features(sent, i, is_training):
         word = sent[i][0] if is_training else sent[i]
         features = {

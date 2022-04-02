@@ -125,7 +125,7 @@ li {
         <ul>
             {% for sent in sentences %}
                 <li>
-                    <a href="{{ url_for(".toolkit_infomation", id=sent.id) }}">{{ sent.sentence }}</a>
+                    <a href="{{ url_for(".toolkit_infomation", id=sent.id) }}">{{ sent.sentence | word_break }}</a>
                 </li>
             {% endfor %}
         <ul>

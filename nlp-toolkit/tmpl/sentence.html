@@ -184,10 +184,10 @@ nav a {
 {% if next or prev %}
     <nav>
         {% if prev %}
-            <a href="{{ url_for(".toolkit_infomation", id=prev.id) }}" class="prev">{{ prev.sentence }}</a>
+            <a href="{{ url_for(".toolkit_infomation", id=prev.id) }}" class="prev">{{ prev.sentence | word_break }}</a>
         {% endif %}
         {% if next %}
-            <a href="{{ url_for(".toolkit_infomation", id=next.id) }}" class="next">{{ next.sentence }}</a>
+            <a href="{{ url_for(".toolkit_infomation", id=next.id) }}" class="next">{{ next.sentence | word_break }}</a>
         {% endif %}
     </nav>
 {% endif %}

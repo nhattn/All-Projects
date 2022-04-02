@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
 __all__ = [
-    "toolkit", "errors"
+    "toolkit", "errors", "jinja"
 ]
