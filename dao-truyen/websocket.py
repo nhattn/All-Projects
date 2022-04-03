@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+# A simple WebSocket server Sergei Pikhovkin <s@pikhovkin.ru>
+# <https://github.com/pikhovkin/simple-websocket-server>
+# Modified by Trần Ngọc Nhật <anhchangthode22145@gmail.com>
+
 import hashlib
 import base64
 import socket
