@@ -32,6 +32,9 @@ var story = {
 }
 /* Add data to parts */
 var parts = []
+parts.push({
+    name:story.title
+})
 if (story.cover.length > 0) {
     parts.push({
         cover : story.cover
@@ -74,37 +77,50 @@ for (var i = 0; i < paragraphs.length; i++) {
         parts.push({intro:ch+lines[j]});
     }
 }
+var name = null;
 var ws = new WebSocket('ws://127.0.0.1:9876')
+function response(text) {
+    console.log(text)
+}
 ws.onopen = function(e) {
-    console.log('Ready');
-    /* When connected send story name to make folder store markdown files */
-    sendData(ws, 's'+JSON.stringify({
-        name:story.title
-    }))
+    response('Ready');
 };
 ws.onmessage = function(e) {
     const obj = JSON.parse(e.data || '{}');
     if (obj['name'] != undefined && obj['name'].length > 0) {
-        setTimeout(function() {
-            var name = obj['name'].trim();
-            if (parts.length > 0) {
-                var part = parts.shift();
-                part.story = name;
-                sendData(ws, 's'+JSON.stringify(part));
-            } else {
-                console.log('All done');
-            }
-        }, 100);
+        name = obj['name'].trim();
     }
     if (obj['message'] != undefined) {
-        console.log(obj['message'])
+        response(obj['message'])
+        name = '';
     } else if (obj['error'] != undefined) {
-        console.log(obj['error'])
+        response(obj['error'])
+        name = '';
     }
 };
 ws.onclose = function(e) {
-    console.log('Closed')
+    name = '';
+    response('Closed')
 }
 ws.onerror = function(e) {
-    console.log('Error');
+    name = '';
+    response('Error');
 }
+var part = parts.shift();
+sendData(ws, 's'+JSON.stringify(part));
+var iid = setInterval(function() {
+    if (name && name.length == 0) {
+        ws.close();
+        clearInterval(iid);
+        return;
+    }
+    if (parts.length > 0) {
+        var part = parts.shift();
+        part.story = name;
+        sendData(ws, 's'+JSON.stringify(part));
+    } else {
+        clearInterval(iid);
+        ws.close();
+        console.log('All done');
+    }
+}, 500);

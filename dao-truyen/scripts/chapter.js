@@ -95,36 +95,47 @@ for (var i = 0; i < paragraphs.length; i++) {
         });
     }
 }
+var name = null;
 var ws = new WebSocket('ws://127.0.0.1:9876')
+function response(text) {
+    console.log(text)
+}
 ws.onopen = function(e) {
     console.log('Ready');
-    /* When ready send first part */
-    var part = parts.shift();
-    sendData(ws, 'c'+JSON.stringify(part))
 };
 ws.onmessage = function(e) {
     const obj = JSON.parse(e.data || '{}');
-    /* send next part if has name of story is response */
     if (obj['name'] != undefined && obj['name'].length > 0) {
-        setTimeout(function() {
-            var name = obj['name'].trim();
-            if (parts.length > 0) {
-                var part = parts.shift();
-                sendData(ws, 'c'+JSON.stringify(part));
-            } else {
-                console.log('All done');
-            }
-        }, 100);
+        name = obj['name'].trim();
     }
     if (obj['message'] != undefined) {
-        console.log(obj['message'])
+        response(obj['message'])
+        name = '';
     } else if (obj['error'] != undefined) {
-        console.log(obj['error'])
+        response(obj['error'])
+        name = '';
     }
 };
 ws.onclose = function(e) {
-    console.log('Closed')
+    response('Closed')
+    name = '';
 }
 ws.onerror = function(e) {
-    console.log('Error');
+    response('Error');
+    name = '';
 }
+var iid = setInterval(function() {
+    if (name && name.length == 0) {
+        ws.close();
+        clearInterval(iid);
+        return;
+    }
+    if (parts.length > 0) {
+        var part = parts.shift();
+        sendData(ws, 'c'+JSON.stringify(part));
+    } else {
+        clearInterval(iid)
+        ws.close();
+        response('All done');
+    }
+}, 500);
