@@ -142,31 +142,43 @@ class Tokenizer:
             word1 = sent[i - 1][0] if is_training else sent[i - 1]
             features.update({
                 '-1:word.lower()': word1.lower(),
+                '-1:word.is_firstname()' : word1.lower() in Tokenizer.first_names,
+                '-1:word.is_middlename()' : word1.lower() in Tokenizer.middle_names,
+                '-1:word.is_lastname()' : word1.lower() in Tokenizer.last_names,
                 '-1:word.istitle()': word1.istitle(),
                 '-1:word.isupper()': word1.isupper(),
                 '-1:word.bi_gram()': ' '.join([word1, word]).lower() in Tokenizer.bi_grams,
-                '-1:word.is_location()': ' '.join([word1, word]).lower() in Tokenizer.location_names
+                '-1:word.is_location()': ' '.join([word1, word]).lower() in Tokenizer.location_names or word1.lower() in Tokenizer.location_names
             })
             if i > 1:
                 word2 = sent[i - 2][0] if is_training else sent[i - 2]
                 features.update({
+                    '-2:word.is_firstname()' : word2.lower() in Tokenizer.first_names,
+                    '-2:word.is_middlename()' : word2.lower() in Tokenizer.middle_names,
+                    '-2:word.is_lastname()' : word2.lower() in Tokenizer.last_names,
                     '-2:word.tri_gram()': ' '.join([word2, word1, word]).lower() in Tokenizer.tri_grams,
-                    '-2:word.is_location()': ' '.join([word2, word1, word]).lower() in Tokenizer.location_names
+                    '-2:word.is_location()': ' '.join([word2, word1, word]).lower() in Tokenizer.location_names or word2.lower() in Tokenizer.location_names
                 })
         if i < len(sent) - 1:
             word1 = sent[i + 1][0] if is_training else sent[i + 1]
             features.update({
                 '+1:word.lower()': word1.lower(),
+                '+1:word.is_firstname()' : word1.lower() in Tokenizer.first_names,
+                '+1:word.is_middlename()' : word1.lower() in Tokenizer.middle_names,
+                '+1:word.is_lastname()' : word1.lower() in Tokenizer.last_names,
                 '+1:word.istitle()': word1.istitle(),
                 '+1:word.isupper()': word1.isupper(),
                 '+1:word.bi_gram()': ' '.join([word, word1]).lower() in Tokenizer.bi_grams,
-                '+1:word.is_location()': ' '.join([word, word1]).lower() in Tokenizer.location_names
+                '+1:word.is_location()': ' '.join([word, word1]).lower() in Tokenizer.location_names or word1.lower() in Tokenizer.location_names
             })
             if i < len(sent) - 2:
                 word2 = sent[i + 2][0] if is_training else sent[i + 2]
                 features.update({
+                    '+2:word.is_firstname()' : word2.lower() in Tokenizer.first_names,
+                    '+2:word.is_middlename()' : word2.lower() in Tokenizer.middle_names,
+                    '+2:word.is_lastname()' : word2.lower() in Tokenizer.last_names,
                     '+2:word.tri_gram()': ' '.join([word, word1, word2]).lower() in Tokenizer.tri_grams,
-                    '+2:word.is_location()': ' '.join([word, word1, word2]).lower() in Tokenizer.location_names
+                    '+2:word.is_location()': ' '.join([word, word1, word2]).lower() in Tokenizer.location_names or word2.lower() in Tokenizer.location_names
                 })
         return features
 
