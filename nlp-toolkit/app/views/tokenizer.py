@@ -49,11 +49,12 @@ class Tokenizer:
                 token = token.strip()
                 if token:
                     word = token.lower().split()
-                    first_names.append(word[0])
+                    first_names.add(word[0])
                     if len(word) > 1:
-                        last_names.append(word[-1])
+                        last_names.add(word[-1])
                     if len(word) > 2:
-                        middle_names.extend(word[1:-1])
+                        for w in word[1:-1]:
+                            middle_names.add(w)
     except:
         pass
 
