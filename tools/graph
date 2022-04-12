@@ -1,0 +1,57 @@
+#!/usr/bin/bash
+
+# https://tex.stackexchange.com/questions/125244/how-can-i-produce-the-history-graph-of-a-git-repository-in-latex
+
+GIT_DIR=${1:-}"
+GIT_TREE=${2:-}"
+
+if [ "$GIT_DIR" == "" ]; then
+    echo "Usage: $0 <git_directory> <git_tree>"
+    exit
+fi
+
+if [ ! -d "$GIT_DIR" ]; then
+    echo "\"$GIT_DIR\" is not exists"
+    exit
+fi
+
+if [ "$GIT_TREE" == "" ]; then
+    echo "Usage: $0 $GIT_DIR <git_tree>"
+    exit
+fi
+
+if [ ! -d "$GIT_TREE" ]; then
+    echo "\"$GIT_TREE\" is not exists"
+    exit
+fi
+
+# https://stackoverflow.com/a/677212
+if ! pdflatex -v &> /dev/null
+then
+    sudo apt-get install texlive # https://askubuntu.com/a/477324
+fi
+
+cat > /tmp/git-graph.tex <<EOF
+\\documentclass{standalone}
+\\usepackage{tikz}
+\\usepackage{filecontents}
+% gitgraph.txt contains raw output of: \$ git --git-dir='$GIT_DIR' --work-tree='$WORK_TREE' log --graph --oneline
+\\begin{filecontents}{gitgraph.txt}
+`git --git-dir='$GIT_DIR' --work-tree='$WORK_TREE' log --graph --oneline`
+\\end{filecontents}
+
+\\newcommand\\commit[2]{\\node[commit] (#1) {}; \\node[clabel] at (#1) {\\texttt{#1}: #2};}
+\\newcommand\\ghost[1]{\\coordinate (#1);}
+\\newcommand\\connect[2]{\\path (#1) to[out=90,in=-90] (#2);}
+
+\\begin{document}
+    \\begin{tikzpicture}
+        \\tikzstyle{commit}=[draw,circle,fill=white,inner sep=0pt,minimum size=5pt]
+        \\tikzstyle{clabel}=[right,outer sep=1em]
+        \\tikzstyle{every path}=[draw]
+        \\matrix [column sep={1em,between origins},row sep=\\lineskip]
+        {
+        }
+    \\end{tikzpicture}
+\\end{document}
+EOF
