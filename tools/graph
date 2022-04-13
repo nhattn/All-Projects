@@ -2,9 +2,9 @@
 
 # https://tex.stackexchange.com/questions/125244/how-can-i-produce-the-history-graph-of-a-git-repository-in-latex
 
-GIT_DIR=${1:-}"
-GIT_TREE=${2:-}"
-
+GIT_DIR="${1:-}"
+GIT_TREE="${2:-}"
+COLS="72"
 if [ "$GIT_DIR" == "" ]; then
     echo "Usage: $0 <git_directory> <git_tree>"
     exit
@@ -35,9 +35,13 @@ cat > /tmp/git-graph.tex <<EOF
 \\documentclass{standalone}
 \\usepackage{tikz}
 \\usepackage{filecontents}
-% gitgraph.txt contains raw output of: \$ git --git-dir='$GIT_DIR' --work-tree='$WORK_TREE' log --graph --oneline
+% gitgraph.txt contains raw output of: \$ git --git-dir='$GIT_DIR' --work-tree='$GIT_TREE' log --graph --oneline
 \\begin{filecontents}{gitgraph.txt}
-`git --git-dir='$GIT_DIR' --work-tree='$WORK_TREE' log --graph --oneline`
+EOF
+
+git --git-dir="$GIT_DIR" --work-tree="$GIT_TREE" log --graph --oneline >> /tmp/git-graph.tex
+
+cat >> /tmp/git-graph.tex <<EOF
 \\end{filecontents}
 
 \\newcommand\\commit[2]{\\node[commit] (#1) {}; \\node[clabel] at (#1) {\\texttt{#1}: #2};}
@@ -45,13 +49,181 @@ cat > /tmp/git-graph.tex <<EOF
 \\newcommand\\connect[2]{\\path (#1) to[out=90,in=-90] (#2);}
 
 \\begin{document}
-    \\begin{tikzpicture}
-        \\tikzstyle{commit}=[draw,circle,fill=white,inner sep=0pt,minimum size=5pt]
-        \\tikzstyle{clabel}=[right,outer sep=1em]
-        \\tikzstyle{every path}=[draw]
-        \\matrix [column sep={1em,between origins},row sep=\\lineskip]
-        {
-        }
-    \\end{tikzpicture}
+EOF
+
+#    \\begin{tikzpicture}
+#        \\tikzstyle{commit}=[draw,circle,fill=white,inner sep=0pt,minimum size=5pt]
+#        \\tikzstyle{clabel}=[right,outer sep=1em]
+#        \\tikzstyle{every path}=[draw]
+#        \\matrix [column sep={1em,between origins},row sep=\\lineskip]
+#        {
+#        }
+#    \\end{tikzpicture}
+
+ruby -e "def vn_accent(text)
+    text = text.gsub(/[àáạảãâầấậẩẫăằắặẳẵ]/, \"a\")
+    text = text.gsub(/[ÀÁẠẢÃĂẰẮẶẲẴÂẦẤẬẨẪ]/, \"A\")
+    text = text.gsub(/[èéẹẻẽêềếệểễ]/, \"e\")
+    text = text.gsub(/[ÈÉẸẺẼÊỀẾỆỂỄ]/, \"E\")
+    text = text.gsub(/[òóọỏõôồốộổỗơờớợởỡ]/, \"o\")
+    text = text.gsub(/[ÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠ]/, \"O\")
+    text = text.gsub(/[ìíịỉĩ]/, \"i\")
+    text = text.gsub(/[ÌÍỊỈĨ]/, \"I\")
+    text = text.gsub(/[ùúụủũưừứựửữ]/, \"u\")
+    text = text.gsub(/[ƯỪỨỰỬỮÙÚỤỦŨ]/, \"U\")
+    text = text.gsub(/[ỳýỵỷỹ]/, \"y\")
+    text = text.gsub(/[ỲÝỴỶỸ]/, \"Y\")
+    text = text.gsub(/[Đ]/, \"D\")
+    text = text.gsub(/[đ]/, \"d\")
+    return text
+end
+
+class Commit
+  attr_accessor :hash
+  attr_accessor :children
+  attr_accessor :parents
+  attr_accessor :message
+  attr_reader   :node_pos
+
+  def initialize()
+    @hash = nil
+    @children = Hash.new()
+    @parents = Hash.new()
+    @message = \"\"
+    @node_pos = 0
+    @message_pos = 0
+  end
+  def build(line)
+    pos=0
+    line.split(\" \").each do |word|
+      if word =~ /[a-f0-9]{7}/ &&  @message == \"\"
+        if ! @hash
+          @hash = word
+        else
+          @parents[word] = nil
+        end
+      elsif word == '*'
+        @node_pos = pos
+      elsif word =~ /[^|\\/\\\\]/
+        @message_pos = pos
+        @message << \" #{word}\"
+      end
+      pos = pos + 1
+    end
+    @message.delete!(\"!\")
+    @message.lstrip!()
+    if !@hash
+      return false
+    end
+    return true
+  end
+
+  def set_parent(c)
+    @parents[c.hash] = c
+    c.children[@hash] = self
+  end
+
+  def export_to_tikz(ypos)
+    msg = @message
+    msg = vn_accent(msg)
+    if msg.length > ${COLS}
+        msg = msg.slice(0..${COLS}) + \"...\"
+    end
+    puts \"        \\\\node[commit] (#{@hash}) at (#{0.5*@node_pos},#{ypos}) {};\"
+    puts \"            \\\\node[right,xshift=#{@message_pos*0.5}] (label_#{@hash}) at (#{@hash}.east) {\"
+    puts \"                \\\\verb!#{@hash} #{msg}!\"
+    puts \"            };\"
+    @children.each_value do |child|
+      puts \"            \\\\connect{#{@hash}}{#{child.hash}};\"
+      puts \"\"
+    end
+  end
+
+  def to_s()
+    \"#{@hash}: #{@message} #{@node_pos} #{@message_pos}\"
+  end
+end
+
+class Branch
+  attr_accessor :name
+  attr_accessor :hash
+  attr_accessor :commit
+
+  def initialize(line)
+    words = line.split(\" \")
+    @name = words[0]
+    @hash = words[1]
+    @commit = nil
+  end
+end
+
+class Repository
+  def initialize()
+    @commits = Hash.new()
+    @branches = Array.new()
+  end
+
+  def add_commit(commit)
+    @commits[commit.hash] = commit
+  end
+
+  def add_branch(branch)
+    if ! @commits.has_key?(branch.hash)
+      return false
+    end
+    c = @commits.fetch(branch.hash)
+    branch.commit = c
+    @branches << branch
+    return true
+  end
+
+  def resolve_parents()
+    @commits.each_value do |commit|
+      commit.parents.keys.each do |parent_hash|
+        c = @commits.fetch(parent_hash)
+        commit.set_parent(c)
+      end
+    end
+  end
+
+  def export_to_tikz
+    puts \"    \\\\begin{tikzpicture}\"
+    puts \"\"
+    puts \"        \\\\tikzstyle{commit}=[draw,circle,fill=white,inner sep=0pt,minimum size=5pt]\"
+    puts \"        \\\\tikzstyle{every path}=[draw]\"
+    puts \"        \\\\tikzstyle{branch}=[draw,rectangle,rounded corners=3,fill=white,inner sep=2pt,minimum size=5pt]\"
+    puts \"\"
+    ypos=0
+    ystep=-0.5
+    @commits.each_value do |commit|
+      commit.export_to_tikz(ypos)
+      ypos = ypos + ystep
+    end
+    @branches.each do |branch|
+      branchname = branch.name.gsub! 'remotes/origin/', ''
+      puts \"        % #{branch.name}\"
+      puts \"        \\\\node[branch,right,xshift=.1] (#{branch.name}) at (label_#{branch.hash}.east) {\\\\texttt{#{branchname}}};\"
+    end
+    puts \"    \\\\end{tikzpicture}\"
+  end
+end
+
+r = Repository.new()
+
+\`git --git-dir='$GIT_DIR' --work-tree='$GIT_TREE' log --graph --branches --oneline --parents\`.lines().each do |line|
+  c = Commit.new()
+  if c.build(line)
+    r.add_commit(c)
+  end
+end
+r.resolve_parents()
+
+\`git --git-dir='$GIT_DIR' --work-tree='$GIT_TREE' branch -av | cut -b 3-\`.lines().each do |line|
+  r.add_branch(Branch.new(line))
+end
+
+r.export_to_tikz()" >> /tmp/git-graph.tex
+
+cat >> /tmp/git-graph.tex <<EOF
 \\end{document}
 EOF
