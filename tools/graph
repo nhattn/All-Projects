@@ -130,7 +130,7 @@ class Commit
         msg = msg.slice(0..${COLS}) + \"...\"
     end
     puts \"        \\\\node[commit] (#{@hash}) at (#{0.5*@node_pos},#{ypos}) {};\"
-    puts \"            \\\\node[right,xshift=#{@message_pos*0.5}] (label_#{@hash}) at (#{@hash}.east) {\"
+    puts \"            \\\\node[right,xshift=15] (label_#{@hash}) at (#{@hash}.east) {\"
     puts \"                \\\\verb!#{@hash} #{msg}!\"
     puts \"            };\"
     @children.each_value do |child|
@@ -202,7 +202,7 @@ class Repository
     @branches.each do |branch|
       branchname = branch.name.gsub! 'remotes/origin/', ''
       puts \"        % #{branch.name}\"
-      puts \"        \\\\node[branch,right,xshift=.1] (#{branch.name}) at (label_#{branch.hash}.east) {\\\\texttt{#{branchname}}};\"
+      puts \"        \\\\node[branch,right,xshift=10] (#{branch.name}) at (label_#{branch.hash}.east) {\\\\texttt{#{branchname}}};\"
     end
     puts \"    \\\\end{tikzpicture}\"
   end
@@ -227,3 +227,5 @@ r.export_to_tikz()" >> /tmp/git-graph.tex
 cat >> /tmp/git-graph.tex <<EOF
 \\end{document}
 EOF
+
+pdflatex --output-directory=/tmp /tmp/git-graph.tex
