@@ -87,7 +87,17 @@
         </dependency>
 
     <!--mvn install:install-file -Dfile=lib/marmot.jar -DgroupId=vncorenlp -DartifactId=marmot -Dversion=1.0 -Dpackaging=jar-->
-    </dependencies>
+        <dependency>
+          <groupId>org.apache.opennlp</groupId>
+          <artifactId>opennlp-maxent</artifactId>
+          <version>3.0.3</version>
+       </dependency>
+        <dependency>
+          <groupId>org.apache.opennlp</groupId>
+          <artifactId>opennlp-tools</artifactId>
+          <version>1.5.3</version>
+       </dependency>
+   </dependencies>
     <repositories>
         <repository>
             <id>vncorenlp</id>
