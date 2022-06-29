@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Collections;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
@@ -29,6 +32,7 @@ public class VnCoreNLP {
     public static PosTagger posTagger = null;
     public static PosChunker posChunker = null;
     public static WordSegmenter wordSegmenter = null;
+    private static final Pattern KEY_VALUES = Pattern.compile("([^&]+)=([^&]+)");
 
     public static void kernelInit() {
         try {
@@ -41,7 +45,81 @@ public class VnCoreNLP {
             e.printStackTrace();
         }
     }
+    // http://www.java2s.com/example/java-utility-method/url-parameter-builder/parseparameters-final-string-value-241ac.html
+    public static Map<String, String> parseParameters(final String value) {
+        if (value == null || value.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        final Map<String, String> map = new HashMap<String, String>();
+        final Matcher m = KEY_VALUES.matcher(value);
+        while (m.find()) {
+            map.put(decodeRfc5849(m.group(1)), decodeRfc5849(m.group(2)));
+        }
+        return map;
+    }
 
+    public static String decodeRfc5849(final String value) {
+        try {
+            return URLDecoder.decode(value, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            throw new AssertionError(ex); // UTF-8 is always supported
+        }
+    }
+    
+    public static String sentenceToJSON(Sentence sentence) throws IOException {
+        StringBuffer jsb = new StringBuffer();
+        List<Word> words = sentence.getWords();
+        List<String> tokens = new ArrayList<>();
+        List<String> postags = new ArrayList<>();
+        for (int j = 0; j < words.size(); j++) {
+            tokens.add(words.get(j).getForm());
+            String wtag = words.get(j).getPosTag();
+            if (wtag == null) {
+                wtag = "X";
+            }
+            postags.add(wtag);
+        }
+        List<String> chunktags = posChunker.chunking(tokens.toArray(new String[tokens.size()]), postags.toArray(new String[postags.size()]));
+        jsb.append("[");
+        for (int j = 0; j < words.size(); j++) {
+            String word = words.get(j).getForm().replace("\"", "\\\"");
+            String tag = words.get(j).getPosTag();
+            String chunk = chunktags.get(j);
+            String ner = words.get(j).getNerLabel();
+            if (tag == null) {
+                tag = "X";
+            }
+            if (chunk == null) {
+                chunk = "O";
+            }
+            if (ner == null) {
+                ner = "O";
+            }
+            jsb.append("[");
+            jsb.append("\"" + word + "\",");
+            jsb.append("\"" + tag + "\",");
+            jsb.append("\"" + chunk + "\",");
+            jsb.append("\"" + ner + "\"");
+            jsb.append("]");
+            if (j < words.size() - 1) {
+                jsb.append(",");
+            }
+        }
+        jsb.append("]");
+        return jsb.toString();
+    }
+
+    public static Map<String, String> parseQuery(final HttpExchange exchange) throws IOException {
+        byte[] buffer = new byte[4096];
+        int bytesRead = 0;
+        StringBuilder query = new StringBuilder();
+        InputStream is = exchange.getRequestBody();
+        while ((bytesRead = is.read(buffer)) != -1) {
+            query.append(new String(buffer, 0, bytesRead));
+        }
+        is.close();
+        return parseParameters(query.toString());
+    }
     public static void main(String[] args) throws IOException {
         (new Thread(new Runnable() {
             @Override
@@ -62,6 +140,58 @@ public class VnCoreNLP {
                 resp.write(responseAsBytes);
                 resp.flush();
                 resp.close();
+                exchange.close();
+            }
+        });
+        server.createContext("/api/sentence", new HttpHandler() {
+            @Override
+            public void handle(final HttpExchange exchange) throws IOException {
+                String requestMethod = exchange.getRequestMethod();
+                Headers responseHeaders = exchange.getResponseHeaders();
+                OutputStream resp = exchange.getResponseBody();
+                responseHeaders.set("Content-Type", "application/json");
+                if (dependencyParser == null || nerRecognizer == null || posTagger == null || posChunker == null || wordSegmenter == null) {
+                    String respText = "{\"error\":\"kernel is not ready\"}";
+                    final byte[] responseAsBytes = respText.getBytes("UTF-8");
+                    exchange.sendResponseHeaders(200, responseAsBytes.length);
+                    resp.write(responseAsBytes);
+                    resp.flush();
+                    resp.close();
+                    exchange.close();
+                    return;
+                }
+                if(requestMethod.equalsIgnoreCase("POST")) {
+                    Map<String, String> params = parseQuery(exchange);
+                    String text = params.getOrDefault("text", "").toString();
+                    String respText = "{\"error\":\"Invalid params\"}";
+                    if (text == null || "".equals(text)) {
+                        respText = "{\"error\":\"Text is empty\"}";
+                        final byte[] responseAsBytes = respText.getBytes("UTF-8");
+                        exchange.sendResponseHeaders(400, responseAsBytes.length);
+                        resp.write(responseAsBytes);
+                        resp.flush();
+                        resp.close();
+                    } else {
+                        try {
+                            Sentence sentence = new Sentence(text, wordSegmenter, posTagger, nerRecognizer, dependencyParser);
+                            respText = sentenceToJSON(sentence);
+                            final byte[] responseAsBytes = respText.getBytes("UTF-8");
+                            exchange.sendResponseHeaders(200, responseAsBytes.length);
+                            resp.write(responseAsBytes);
+                            resp.flush();
+                            resp.close();
+                        } catch (Exception e) {
+                            throw e;
+                        }
+                    }
+                } else {
+                    String badRequest = "{\"error\":\"400 : Bad request !!!\"}";
+                    exchange.sendResponseHeaders(400, badRequest.length());
+                    resp.write(badRequest.getBytes("UTF-8"));
+                    resp.flush();
+                    resp.close();
+                }
+                exchange.close();
             }
         });
         server.createContext("/api/nlp", new HttpHandler() {
@@ -82,15 +212,7 @@ public class VnCoreNLP {
                     return;
                 }
                 if(requestMethod.equalsIgnoreCase("POST")) {
-                    byte[] buffer = new byte[4096];
-                    int bytesRead = 0;
-                    StringBuilder query = new StringBuilder();
-                    InputStream is = exchange.getRequestBody();
-                    while ((bytesRead = is.read(buffer)) != -1) {
-                        query.append(new String(buffer, 0, bytesRead));
-                    }
-                    is.close();
-                    Map<String, Object> params = parseQuery(query.toString());
+                    Map<String, String> params = parseQuery(exchange);
                     String text = params.getOrDefault("text", "").toString();
                     String respText = "{\"error\":\"Invalid params\"}";
                     if (text == null || "".equals(text)) {
@@ -125,44 +247,7 @@ public class VnCoreNLP {
                             jsb.append("[");
                             for (int i = 0; i < sentences.size(); i++) {
                                 Sentence sent = sentences.get(i);
-                                List<Word> words = sent.getWords();
-                                List<String> tokens = new ArrayList<>();
-                                List<String> postags = new ArrayList<>();
-                                for (int j = 0; j < words.size(); j++) {
-                                    tokens.add(words.get(j).getForm());
-                                    String wtag = words.get(j).getPosTag();
-                                    if (wtag == null) {
-                                        wtag = "X";
-                                    }
-                                    postags.add(wtag);
-                                }
-                                List<String> chunktags = posChunker.chunking(tokens.toArray(new String[tokens.size()]), postags.toArray(new String[postags.size()]));
-                                jsb.append("[");
-                                for (int j = 0; j < words.size(); j++) {
-                                    String word = words.get(j).getForm().replace("\"", "\\\"");
-                                    String tag = words.get(j).getPosTag();
-                                    String chunk = chunktags.get(j);
-                                    String ner = words.get(j).getNerLabel();
-                                    if (tag == null) {
-                                        tag = "X";
-                                    }
-                                    if (chunk == null) {
-                                        chunk = "O";
-                                    }
-                                    if (ner == null) {
-                                        ner = "O";
-                                    }
-                                    jsb.append("[");
-                                    jsb.append("\"" + word + "\",");
-                                    jsb.append("\"" + tag + "\",");
-                                    jsb.append("\"" + chunk + "\",");
-                                    jsb.append("\"" + ner + "\"");
-                                    jsb.append("]");
-                                    if (j < words.size() - 1) {
-                                        jsb.append(",");
-                                    }
-                                }
-                                jsb.append("]");
+                                jsb.append(sentenceToJSON(sent));
                                 if (i < sentences.size() - 1) {
                                     jsb.append(",");
                                 }
@@ -190,38 +275,5 @@ public class VnCoreNLP {
         });
         server.setExecutor(null);
         server.start();
-    }
-    public static Map<String, Object> parseQuery(String query) throws UnsupportedEncodingException {
-        Map<String, Object> parameters = new HashMap<String, Object>();
-        if (query == null || "".equals(query)) {
-            return parameters;
-        }
-        String pairs[] = query.split("[&]");
-        for (String pair : pairs) {
-            String param[] = pair.split("[=]");
-            String key = null;
-            String value = null;
-            if (param.length > 0) {
-                key = URLDecoder.decode(param[0], "UTF-8");
-            }
-            if (param.length > 1) {
-                value = URLDecoder.decode(param[1], "UTF-8");
-            }
-            if (parameters.containsKey(key)) {
-                Object obj = parameters.get(key);
-                if(obj instanceof List<?>) {
-                    List<String> values = (List<String>)obj;
-                    values.add(value);
-                } else if(obj instanceof String) {
-                    List<String> values = new ArrayList<String>();
-                    values.add((String)obj);
-                    values.add(value);
-                    parameters.put(key, values);
-                }
-            } else {
-                parameters.put(key, value);
-            }
-        }
-        return parameters;
     }
 }
