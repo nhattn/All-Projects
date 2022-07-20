@@ -44,6 +44,7 @@ if __name__ == "__main__":
             words = [word for word in line.split(' ') if word.strip()]
             key = words[0]
             words = word_tokenize(" ".join(words[1:])).split(' ')
+            words = [word for word in words if is_token(word)]
             lines.append([key, words])
             count[key] = count.get(key, 0) + 1
             if key not in label_vocab:
@@ -68,11 +69,22 @@ if __name__ == "__main__":
                 words_count[word] = min([label_vocab[x][word] for x in label_vocab])
         
         sorted_count = sorted(words_count, key=words_count.get, reverse=True)
-
+        '''
+        After you generated the df_tfidf dataframe, it is very important
+        to look at the top N words and check them manually according to
+        your needs and your experience in the field so you do not mistakenly
+        add informative words to your list. The number of words is also your
+        call in this task, however, on average, we used in NLP to assume
+        that we have around 40–60% stopwords list of unique words, meaning
+        if you have 100 unique words in your text, 40 to 60 words of them
+        are stopwords. Of course this is in natural language text, such as
+        news or book text. If you have for example product titles, the
+        percentages drops significantly to something around 5%.
+        '''
+        total_words = len(sorted_count)
+        stopword_len = int(total_words * 0.6)
         stopword = set()
-        for word in sorted_count:
-            if words_count[word] < 500:
-                continue
+        for word in sorted_count[0:stopword_len]:
             print(word, words_count[word])
             stopword.add(word)
 
@@ -102,13 +114,14 @@ if __name__ == "__main__":
             alist = all_doc[key]
             random.shuffle(alist)
             for val in alist[:min_doc]:
-                tokens = [token for token in val.split(' ') if is_token(token)]
-                if len(tokens) == 0:
-                    continue
                 label.append(key)
-                text.append(" ".join(tokens))
+                text.append(val)
 
-        X_train, X_test, y_train, y_test = train_test_split(text, label, test_size=test_percent, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(
+            text, label,
+            test_size=test_percent,
+            random_state=42
+        )
 
         label_encoder = LabelEncoder()
         label_encoder.fit(y_train)
@@ -122,7 +135,11 @@ if __name__ == "__main__":
 
         start_time = time.time()
         text_clf = Pipeline([
-            ('vect', CountVectorizer(ngram_range=(1,1), max_df=0.8, max_features=None)),
+            ('vect', CountVectorizer(
+                ngram_range=(1,1),
+                max_df=0.8,
+                max_features=None
+            )),
             ('tfidf', TfidfTransformer()),
             ('clf', SVC(gamma='scale'))
         ])
@@ -131,12 +148,19 @@ if __name__ == "__main__":
         train_time = time.time() - start_time
         print('Done training SVM in', train_time, 'seconds.')
         model_name = os.path.basename(filepath).split('.')[0]
-        pickle.dump((text_clf, label_encoder, stopword), open(os.path.join(MODEL_PATH, "%s.pkl" % model_name), 'wb'))
+        pickle.dump((
+            text_clf,
+            label_encoder,
+            stopword
+        ), open(os.path.join(MODEL_PATH, "%s.pkl" % model_name), 'wb'))
 
         y_pred = text_clf.predict(X_test)
         print('SVM, Accuracy =', np.mean(y_pred == y_test))
         y_pred = text_clf.predict(X_test)
-        print(classification_report(y_test, y_pred, target_names=list(label_encoder.classes_)))
+        print(classification_report(
+            y_test, y_pred,
+            target_names=list(label_encoder.classes_)
+        ))
 
     except Exception as e:
        print('Error', e)
