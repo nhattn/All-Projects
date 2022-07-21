@@ -48,7 +48,7 @@ if __name__ == "__main__":
     
         text = " ".join(lines).strip()
         label = kernel.predict([text])
-        print('Predict label:', encoder.inverse_transform(label)
+        print('Predict label:', encoder.inverse_transform(label))
     
     except Exception as e:
         print('Error', e)
